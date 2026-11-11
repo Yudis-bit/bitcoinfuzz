@@ -340,6 +340,75 @@ Bitcoin::verify_script(const std::vector<uint8_t> &script_sig,
                       FuzzedSignatureChecker(), nullptr);
 }
 
+std::optional<bool>
+Bitcoin::verify_witness_spend(const WitnessSpendInput &input) const {
+  DataStream ds{input.tx_bytes};
+  CMutableTransaction mutable_tx;
+  try {
+    ds >> TX_WITH_WITNESS(mutable_tx);
+  } catch (const std::ios_base::failure &) {
+    return Skip();
+  }
+
+  if (mutable_tx.vin.empty())
+    return Skip();
+
+  const size_t n_in = mutable_tx.vin.size();
+  const unsigned int idx = input.input_index % static_cast<uint32_t>(n_in);
+
+  std::vector<CTxOut> spent_outputs;
+  spent_outputs.reserve(n_in);
+
+  if (input.all_spent_spks.size() == n_in &&
+      input.all_spent_amounts.size() == n_in) {
+    for (size_t i = 0; i < n_in; ++i) {
+      CScript spk(input.all_spent_spks[i].begin(),
+                  input.all_spent_spks[i].end());
+      spent_outputs.emplace_back(input.all_spent_amounts[i], std::move(spk));
+    }
+  } else {
+    CScript default_spk(input.spent_script_pubkey.begin(),
+                        input.spent_script_pubkey.end());
+    for (size_t i = 0; i < n_in; ++i) {
+      spent_outputs.emplace_back(input.spent_amount, default_spk);
+    }
+  }
+
+  CTransaction tx{mutable_tx};
+  PrecomputedTransactionData txdata;
+  txdata.Init(tx, std::move(spent_outputs));
+
+  static_assert(script_verify_flags{SCRIPT_VERIFY_P2SH}.as_int() ==
+                WITNESS_SPEND_FLAG_P2SH);
+  static_assert(script_verify_flags{SCRIPT_VERIFY_DERSIG}.as_int() ==
+                WITNESS_SPEND_FLAG_DERSIG);
+  static_assert(script_verify_flags{SCRIPT_VERIFY_NULLDUMMY}.as_int() ==
+                WITNESS_SPEND_FLAG_NULLDUMMY);
+  static_assert(
+      script_verify_flags{SCRIPT_VERIFY_CHECKLOCKTIMEVERIFY}.as_int() ==
+      WITNESS_SPEND_FLAG_CLTV);
+  static_assert(
+      script_verify_flags{SCRIPT_VERIFY_CHECKSEQUENCEVERIFY}.as_int() ==
+      WITNESS_SPEND_FLAG_CSV);
+  static_assert(script_verify_flags{SCRIPT_VERIFY_WITNESS}.as_int() ==
+                WITNESS_SPEND_FLAG_WITNESS);
+  static_assert(script_verify_flags{SCRIPT_VERIFY_TAPROOT}.as_int() ==
+                WITNESS_SPEND_FLAG_TAPROOT);
+  const script_verify_flags flags = script_verify_flags::from_int(input.flags);
+
+  const CScript &target_spk = txdata.m_spent_outputs[idx].scriptPubKey;
+  const CAmount target_amount = txdata.m_spent_outputs[idx].nValue;
+  ScriptError serror = SCRIPT_ERR_OK;
+
+  bool ok = VerifyScript(
+      tx.vin[idx].scriptSig, target_spk, &tx.vin[idx].scriptWitness, flags,
+      TransactionSignatureChecker(&tx, idx, target_amount, txdata,
+                                  MissingDataBehavior::FAIL),
+      &serror);
+
+  return ok;
+}
+
 namespace {
 void EnsureECCContextInitialized() {
   static bool ecc_context_initialized = false;

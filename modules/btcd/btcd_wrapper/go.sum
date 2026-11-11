@@ -1,3 +1,5 @@
+github.com/Yudis-bit/btcd/txscript/v2 v2.0.0-20261128151828-46319047a6f2 h1:wHvlUD/2rla8cMPB3u2zpuBF1YQAq7tFmZaDPx9lDnY=
+github.com/Yudis-bit/btcd/txscript/v2 v2.0.0-20261128151828-46319047a6f2/go.mod h1:/IYy6xXBmbI0KW6I2ohEhVXPboOUhRrZmCVDr4NfqBg=
 github.com/bitcoinfuzz/btcd v0.26.0-beta.rc1.0.20261022124420-fcaf21884a3d h1:Mp+utk4UjB0MJQ4LOrRpEaXFYCdM00Ly9VszuBteEYI=
 github.com/bitcoinfuzz/btcd v0.26.0-beta.rc1.0.20261022124420-fcaf21884a3d/go.mod h1:e+Z81Vy9eTp+n0TA4F1+4CTT2kha+CMjkGQrQzBrKuA=
 github.com/bitcoinfuzz/btcd/address/v2 v2.0.1-0.20261022124420-fcaf21884a3d h1:guqgZuYIbZ7NMev7Yei1GDVnB9CcTgeVJPPER0oPP60=
@@ -12,8 +14,6 @@ github.com/bitcoinfuzz/btcd/chainhash/v2 v2.0.1-0.20261022124420-fcaf21884a3d h1
 github.com/bitcoinfuzz/btcd/chainhash/v2 v2.0.1-0.20261022124420-fcaf21884a3d/go.mod h1:7nwqmt0UKizjVgWMhTmD8E18DglNmuZ6X+NhK8UQKP8=
 github.com/bitcoinfuzz/btcd/psbt/v2 v2.0.1-0.20261022124420-fcaf21884a3d h1:OIvYzZiSdx9OTOtnClEFsmkRzBs3n51sHzM3Xr8pxKY=
 github.com/bitcoinfuzz/btcd/psbt/v2 v2.0.1-0.20261022124420-fcaf21884a3d/go.mod h1:O7URUVrhi6aC5+Qhl0vhtqo2KdltG+vRv44ecPlan+E=
-github.com/bitcoinfuzz/btcd/txscript/v2 v2.0.1-0.20261022124420-fcaf21884a3d h1:uD3V4ppufBg22YPFegm20VHX3cIBTZz86YrLZlxrHIs=
-github.com/bitcoinfuzz/btcd/txscript/v2 v2.0.1-0.20261022124420-fcaf21884a3d/go.mod h1:/IYy6xXBmbI0KW6I2ohEhVXPboOUhRrZmCVDr4NfqBg=
 github.com/bitcoinfuzz/btcd/wire/v2 v2.0.1-0.20261022124420-fcaf21884a3d h1:vXEv6JrRm6yOB0eaJ9cWTUPw87NXpaE14hcD3bJ3te0=
 github.com/bitcoinfuzz/btcd/wire/v2 v2.0.1-0.20261022124420-fcaf21884a3d/go.mod h1:7lmdLFQyLs/KjR/lxj3TDUcb5/BBUMvPRHDmZW2YYms=
 github.com/btcsuite/btclog v1.0.0 h1:sEkpKJMmfGiyZjADwEIgB1NSwMyfdD1FB8v6+w1T0Ns=

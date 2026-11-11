@@ -238,5 +238,74 @@ BitcoinKernel::kernel_transaction_check(std::span<const uint8_t> buffer) const {
   return Ok(result);
 }
 
+std::optional<bool>
+BitcoinKernel::verify_witness_spend(const WitnessSpendInput &input) const {
+  try {
+    const auto raw_span = std::as_bytes(std::span{input.tx_bytes});
+    btck::Transaction transaction{raw_span};
+
+    const auto txins = transaction.Inputs();
+    if (txins.empty())
+      return Skip();
+
+    const size_t n_in = txins.size();
+    const uint32_t idx = input.input_index % static_cast<uint32_t>(n_in);
+
+    std::vector<btck::ScriptPubkey> spks;
+    spks.reserve(n_in);
+    std::vector<btck::TransactionOutput> outputs;
+    outputs.reserve(n_in);
+
+    if (input.all_spent_spks.size() == n_in &&
+        input.all_spent_amounts.size() == n_in) {
+      for (size_t i = 0; i < n_in; ++i) {
+        const auto spk_span = std::as_bytes(std::span{input.all_spent_spks[i]});
+        spks.emplace_back(spk_span);
+        outputs.emplace_back(spks.back(), input.all_spent_amounts[i]);
+      }
+    } else {
+      const auto default_spk_span =
+          std::as_bytes(std::span{input.spent_script_pubkey});
+      spks.emplace_back(default_spk_span);
+      for (size_t i = 0; i < n_in; ++i) {
+        outputs.emplace_back(spks.front(), input.spent_amount);
+      }
+    }
+
+    btck::PrecomputedTransactionData txdata{transaction, outputs};
+
+    static_assert(btck_ScriptVerificationFlags_P2SH == WITNESS_SPEND_FLAG_P2SH);
+    static_assert(btck_ScriptVerificationFlags_DERSIG ==
+                  WITNESS_SPEND_FLAG_DERSIG);
+    static_assert(btck_ScriptVerificationFlags_NULLDUMMY ==
+                  WITNESS_SPEND_FLAG_NULLDUMMY);
+    static_assert(btck_ScriptVerificationFlags_CHECKLOCKTIMEVERIFY ==
+                  WITNESS_SPEND_FLAG_CLTV);
+    static_assert(btck_ScriptVerificationFlags_CHECKSEQUENCEVERIFY ==
+                  WITNESS_SPEND_FLAG_CSV);
+    static_assert(btck_ScriptVerificationFlags_WITNESS ==
+                  WITNESS_SPEND_FLAG_WITNESS);
+    static_assert(btck_ScriptVerificationFlags_TAPROOT ==
+                  WITNESS_SPEND_FLAG_TAPROOT);
+
+    const auto &target_output = outputs[idx];
+    const auto target_spk_view = target_output.GetScriptPubkey();
+    btck::ScriptVerifyStatus status;
+
+    bool ok = target_spk_view.Verify(
+        target_output.Amount(), transaction, &txdata, idx,
+        static_cast<btck::ScriptVerificationFlags>(input.flags), status);
+
+    if (!ok &&
+        status == btck::ScriptVerifyStatus::ERROR_INVALID_FLAGS_COMBINATION) {
+      return Skip();
+    }
+
+    return ok;
+  } catch (...) {
+    return Skip();
+  }
+}
+
 } // namespace module
 } // namespace bitcoinfuzz

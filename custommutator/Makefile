@@ -51,7 +51,7 @@ check-format:
 	clang-format -Werror --fail-on-incomplete-format -n mutators/*.h mutators/*.cpp tests/*.cpp
 
 clean:
-	rm -rf *.o **/*.o module.a tmp_obj/ *_combined.o test_onion test_bolt12_invoice
+	rm -rf *.o **/*.o module.a tmp_obj/ *_combined.o test_onion test_bolt12_invoice test_witness_spend
 	cd ../external/secp256k1 && $(MAKE) clean || true
 
 # Test for onion custom mutator
@@ -106,8 +106,17 @@ test_bolt12_invoice: $(SECP256K1_LIB) utils/bech32.o tests/test_bolt12_invoice_m
 		utils/bech32.o \
 		$(SECP256K1_LIB)
 
-test: test_onion test_bolt12_invoice
+test_witness_spend: $(SECP256K1_LIB) utils/sha256.o utils/crypto/ripemd160.o utils/util/sha256_sse4.o tests/test_witness_spend_main.cpp mutators/witness_spend.h
+	$(CXX) -Wall -Wextra -std=c++20 -fsanitize=address,fuzzer-no-link \
+		-I . -I ./utils -I ../ -I ../include \
+		-o test_witness_spend \
+		tests/test_witness_spend_main.cpp \
+		utils/sha256.o utils/crypto/ripemd160.o utils/util/sha256_sse4.o \
+		$(SECP256K1_LIB)
+
+test: test_onion test_bolt12_invoice test_witness_spend
 	./test_onion
 	./test_bolt12_invoice
+	./test_witness_spend
 
 .PHONY: clean test

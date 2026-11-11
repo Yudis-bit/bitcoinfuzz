@@ -36,6 +36,6 @@ replace github.com/btcsuite/btcd/chainhash/v2 => github.com/bitcoinfuzz/btcd/cha
 
 replace github.com/btcsuite/btcd/psbt/v2 => github.com/bitcoinfuzz/btcd/psbt/v2 v2.0.1-0.20261022124420-fcaf21884a3d
 
-replace github.com/btcsuite/btcd/txscript/v2 => github.com/bitcoinfuzz/btcd/txscript/v2 v2.0.1-0.20261022124420-fcaf21884a3d
+replace github.com/btcsuite/btcd/txscript/v2 => github.com/Yudis-bit/btcd/txscript/v2 v2.0.0-20261128151828-46319047a6f2
 
 replace github.com/btcsuite/btcd/wire/v2 => github.com/bitcoinfuzz/btcd/wire/v2 v2.0.1-0.20261022124420-fcaf21884a3d

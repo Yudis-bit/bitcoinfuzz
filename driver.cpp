@@ -158,6 +158,55 @@ void Driver::VerifyScriptTarget(std::span<const uint8_t> buffer) const {
   }
 }
 
+void Driver::VerifyWitnessSpendTarget(std::span<const uint8_t> buffer) const {
+  FuzzedDataProvider provider(buffer.data(), buffer.size());
+
+  WitnessSpendInput input;
+  uint32_t flags =
+      provider.ConsumeIntegral<uint32_t>() & WITNESS_SPEND_FLAGS_MASK;
+  if (flags & WITNESS_SPEND_FLAG_TAPROOT) {
+    flags |= WITNESS_SPEND_FLAG_WITNESS | WITNESS_SPEND_FLAG_P2SH;
+  } else if (flags & WITNESS_SPEND_FLAG_WITNESS) {
+    flags |= WITNESS_SPEND_FLAG_P2SH;
+  }
+  input.flags = flags;
+  input.input_index = provider.ConsumeIntegral<uint32_t>();
+  // Keep spent amounts non-negative: Bitcoin Core's TransactionSignatureChecker
+  // treats negative amounts as missing prevout data rather than a valid value.
+  input.spent_amount = provider.ConsumeIntegralInRange<int64_t>(
+      0, std::numeric_limits<int64_t>::max());
+
+  input.spent_script_pubkey = provider.ConsumeBytes<uint8_t>(
+      provider.ConsumeIntegralInRange<size_t>(0, 128));
+
+  const bool has_multi_prevouts = provider.ConsumeBool();
+  if (has_multi_prevouts) {
+    const size_t num_prevouts = provider.ConsumeIntegralInRange<size_t>(1, 8);
+    for (size_t i = 0; i < num_prevouts; ++i) {
+      input.all_spent_amounts.push_back(
+          provider.ConsumeIntegralInRange<int64_t>(
+              0, std::numeric_limits<int64_t>::max()));
+      const size_t spk_len = provider.ConsumeIntegralInRange<size_t>(0, 64);
+      input.all_spent_spks.push_back(provider.ConsumeBytes<uint8_t>(spk_len));
+    }
+  }
+
+  input.tx_bytes = provider.ConsumeRemainingBytes<uint8_t>();
+  if (input.tx_bytes.empty())
+    return;
+
+  std::optional<bool> last_response{std::nullopt};
+  std::string last_module_name;
+  for (auto &module : modules) {
+    std::optional<bool> res{module.second->verify_witness_spend(input)};
+    if (!res.has_value())
+      continue;
+
+    VerifyMatchingResponse(last_response, last_module_name, module.first, *res,
+                           "Witness spend verification failed");
+  }
+}
+
 void Driver::DescriptorParseTarget(std::span<const uint8_t> buffer) const {
   FuzzedDataProvider provider(buffer.data(), buffer.size());
   std::string desc{provider.ConsumeRemainingBytesAsString()};
@@ -1386,6 +1435,8 @@ void Driver::Run(const uint8_t *data, const size_t size,
     this->CoinbaseBip34Target(buffer);
   } else if (target == "verify_script") {
     this->VerifyScriptTarget(buffer);
+  } else if (target == "verify_witness_spend") {
+    this->VerifyWitnessSpendTarget(buffer);
   } else if (target == "descriptor_parse") {
     this->DescriptorParseTarget(buffer);
   } else if (target == "miniscript_parse") {
